@@ -1,1 +1,1 @@
-# 2course_algorithms
+Будет позже
