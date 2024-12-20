@@ -3,73 +3,106 @@ using System.Collections.Generic;
 
 class Program
 {
-    static void Main()
-    {
-        Random random = new Random();
-        int n = 10;
-        int[] values = new int[n];
-        int[] sizes = new int[n];
-        int capacity = 100;
+    static int[,] memo; 
+    static List<int>[] graph; 
+    static int[] weights;
+    static bool[] included; 
 
+ 
+    static void Main(string[] args)
+    {
+        
+        int n = 10; 
+        weights = new int[n];
+        Random rand = new Random();
+
+       
         for (int i = 0; i < n; i++)
         {
-            values[i] = random.Next(50, 201);
-            sizes[i] = random.Next(10, 51);
+            weights[i] = rand.Next(1, 10); // Вес от 1 до 9
         }
 
-        var (maxValue, A) = Knapsack(values, sizes, capacity);
-        List<int> selectedItems = ReconstructSolution(A, values, sizes, capacity);
-        List<int> selectedValues = new List<int>();
-
-        foreach (int index in selectedItems)
+      
+        graph = new List<int>[n];
+        for (int i = 0; i < n; i++)
         {
-            selectedValues.Add(values[index]);
+            graph[i] = new List<int>();
         }
 
-        Console.WriteLine($"Maximum value: {maxValue}");
-        Console.WriteLine($"Selected items (indices): [{string.Join(", ", selectedItems)}]");
-        Console.WriteLine($"Value of selected items: [{string.Join(", ", selectedValues)}]");
+   
+        for (int i = 1; i < n; i++)
+        {
+            int parent = rand.Next(0, i); 
+            graph[parent].Add(i);
+        }
+
+    
+        memo = new int[n, 2];
+        for (int i = 0; i < n; i++)
+        {
+            memo[i, 0] = -1; 
+            memo[i, 1] = -1; 
+        }
+
+     
+        int maxWeight = GetMaxWeight(0, false);
+        Console.WriteLine($"Максимальный вес независимого множества: {maxWeight}");
+
+     
+        Console.WriteLine("Включенные вершины:");
+        Reconstruct(0, false);
     }
 
-    static (int, int[,]) Knapsack(int[] values, int[] sizes, int capacity)
-    {
-        int n = values.Length;
-        int[,] A = new int[n + 1, capacity + 1];
 
-        for (int i = 1; i <= n; i++)
+    
+    // метод с кэшированием
+    static int GetMaxWeight(int node, bool includedNode)
+    {
+        if (node >= weights.Length) return 0; 
+
+        if (memo[node, includedNode ? 1 : 0] != -1)
+            return memo[node, includedNode ? 1 : 0];
+
+        int weightWithNode = 0;
+        if (!includedNode)
         {
-            for (int c = 0; c <= capacity; c++)
+            weightWithNode = weights[node]; 
+            foreach (var child in graph[node])
             {
-                if (sizes[i - 1] <= c)
-                {
-                    A[i, c] = Math.Max(A[i - 1, c], A[i - 1, c - sizes[i - 1]] + values[i - 1]);
-                }
-                else
-                {
-                    A[i, c] = A[i - 1, c];
-                }
+                weightWithNode += GetMaxWeight(child, false); // один вариант
             }
         }
 
-        return (A[n, capacity], A);
-    }
-
-    static List<int> ReconstructSolution(int[,] A, int[] values, int[] sizes, int capacity)
-    {
-        int n = values.Length;
-        List<int> selectedItems = new List<int>();
-        int c = capacity;
-
-        for (int i = n; i > 0; i--)
+        int weightWithoutNode = 0;
+        foreach (var child in graph[node])
         {
-            if (sizes[i - 1] <= c && A[i, c] == A[i - 1, c - sizes[i - 1]] + values[i - 1])
-            {
-                selectedItems.Add(i - 1);
-                c -= sizes[i - 1];
-            }
+            weightWithoutNode += GetMaxWeight(child, true); // второй, без включения
         }
 
-        selectedItems.Reverse(); 
-        return selectedItems;
+      
+        memo[node, includedNode ? 1 : 0] = Math.Max(weightWithNode, weightWithoutNode);
+        return memo[node, includedNode ? 1 : 0];
+    }
+
+
+    static void Reconstruct(int node, bool includedNode)
+    {
+        if (node >= weights.Length) return;
+
+        if (!includedNode)
+        {
+            Console.WriteLine($"Вершина {node} (вес: {weights[node]}) включена.");
+            foreach (var child in graph[node])
+            {
+                Reconstruct(child, false); 
+            }
+        }
+        else
+        {
+            foreach (var child in graph[node])
+            {
+                Reconstruct(child, true); 
+            }
+        }
     }
 }
